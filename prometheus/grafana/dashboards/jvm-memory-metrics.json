@@ -91,10 +91,7 @@
       "id": 1,
       "options": {
         "legend": {
-          "calcs": [
-            "mean",
-            "max"
-          ],
+          "calcs": ["mean", "max"],
           "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
@@ -190,10 +187,7 @@
       "id": 2,
       "options": {
         "legend": {
-          "calcs": [
-            "mean",
-            "max"
-          ],
+          "calcs": ["mean", "max"],
           "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
@@ -272,9 +266,7 @@
         "namePlacement": "auto",
         "orientation": "horizontal",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -302,10 +294,7 @@
   "preload": false,
   "refresh": "5s",
   "schemaVersion": 41,
-  "tags": [
-    "jvm",
-    "memory"
-  ],
+  "tags": ["jvm", "memory"],
   "templating": {
     "list": [
       {
@@ -326,6 +315,11 @@
             "selected": false,
             "text": "payment-api",
             "value": "payment-api"
+          },
+          {
+            "selected": false,
+            "text": "product-api",
+            "value": "product-api"
           }
         ],
         "query": "order-api,payment-api",
@@ -339,7 +333,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "JVM Memory Metrics (Order/Payment)",
+  "title": "JVM Memory Metrics (Order/Payment/Product)",
   "uid": "ae2f2a73-af55-4a2b-8c5b-60fb084a5655",
   "version": 5
 }

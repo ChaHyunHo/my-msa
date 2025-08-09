@@ -1,4 +1,3 @@
-version: "3.8"
 
 services:
   product-db:
@@ -32,10 +31,13 @@ services:
       SPRING_DATASOURCE_PASSWORD: root
     networks:
       - product-network
+      - msa-net # 카프카
 
 networks:
   product-network:
     driver: bridge
+  msa-net:
+    external: true
 
 volumes:
   product-db-data:
