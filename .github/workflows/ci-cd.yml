@@ -57,19 +57,17 @@ jobs:
           docker compose -f ./msa-payment/docker-compose.yml ps
 
       # 4) 헬스체크 (엔드포인트/포트는 네 컴포즈 설정에 맞춰 수정!)
-      - name: Wait for services to be healthy (Order/Product/Payment)
+      - name: Test Web Server Response [product]
         run: |
-          try_curl() { url="$1"; name="$2"; for i in {1..40}; do
-              code=$(curl -s -o /dev/null -w "%{http_code}" "$url" || true)
-              if [ "$code" = "200" ]; then echo "OK: $name is healthy"; return 0; fi
-              echo "Waiting $name ($i/40) - last code: $code"; sleep 5;
-            done; echo "FAIL: $name not healthy"; docker compose logs --no-color; exit 1; }
+          curl -I http://localhost:8082 | grep "200 OK"
 
-          # 아래 포트는 예시입니다. (호스트 바인딩 기준)
-          # order → 8083, payment → 8084, product → 8085 로 열어놨다고 가정
-          try_curl "http://localhost:8082/actuator/health" "msa-product"
-          try_curl "http://localhost:8083/actuator/health" "msa-order"
-          try_curl "http://localhost:8084/actuator/health" "msa-payment"
+      - name: Test Web Server Response [order]
+        run: |
+          curl -I http://localhost:8083 | grep "200 OK"
+
+      - name: Test Web Server Response [payment]
+        run: |
+          curl -I http://localhost:8084 | grep "200 OK"
 
       # 5) Prometheus가 떠있는지 + 타겟이 등록됐는지 대략 체크(가볍게)
       - name: Check Prometheus (optional)
