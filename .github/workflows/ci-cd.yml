@@ -1,0 +1,81 @@
+name: ci-cd
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 1) 앱 이미지 3개 로컬 태그로 빌드 (Dockerfile이 각 폴더에 있다고 가정)
+      - name: Build app images (local tags)
+        run: |
+          docker build -t msa-order:local   ./msa-order
+          docker build -t msa-product:local ./msa-product
+          docker build -t msa-payment:local ./msa-payment
+
+      # 2) 공용 네트워크(카프카/앱/프로메테우스가 공유)
+      - name: Create shared network
+        run: docker network create msa-net || true
+
+      # 3) 전체 스택 기동
+      #    - 이미 리포에 docker-compose.yml(전체 스택) 있다면 그 파일만 쓰세요.
+      #    - 없고 infra/app 분리돼 있다면 -f 두 개로 합칠 수 있습니다(예시 주석).
+      - name: Compose up (build & run)
+        run: |
+          # 예시 A) 전체가 한 파일일 때
+          docker compose -f docker-compose.yml up -d --build
+
+          # 예시 B) infra와 app이 나뉘어 있을 때 (아래 주석 해제하고 파일명 맞추세요)
+          # docker compose -f deploy/infra-compose.yml -f deploy/app-compose.yml up -d --build
+
+          docker compose ps
+
+      # 4) 헬스체크 (엔드포인트/포트는 네 컴포즈 설정에 맞춰 수정!)
+      - name: Wait for services to be healthy (Order/Product/Payment)
+        run: |
+          try_curl() { url="$1"; name="$2"; for i in {1..40}; do
+              code=$(curl -s -o /dev/null -w "%{http_code}" "$url" || true)
+              if [ "$code" = "200" ]; then echo "OK: $name is healthy"; return 0; fi
+              echo "Waiting $name ($i/40) - last code: $code"; sleep 5;
+            done; echo "FAIL: $name not healthy"; docker compose logs --no-color; exit 1; }
+
+          # 아래 포트는 예시입니다. (호스트 바인딩 기준)
+          # order → 8083, payment → 8084, product → 8085 로 열어놨다고 가정
+          try_curl "http://localhost:8082/actuator/health" "msa-product"
+          try_curl "http://localhost:8083/actuator/health" "msa-order"
+          try_curl "http://localhost:8084/actuator/health" "msa-payment"
+
+      # 5) Prometheus가 떠있는지 + 타겟이 등록됐는지 대략 체크(가볍게)
+      - name: Check Prometheus (optional)
+        run: |
+          # 프로메테우스 포트도 컴포즈에서 매핑된 값으로 바꿔주세요(기본 9090 가정)
+          for i in {1..40}; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:9090/-/ready" || true)
+            [ "$code" = "200" ] && echo "OK: Prometheus ready" && break
+            echo "Waiting Prometheus ($i/40) - last code: $code"; sleep 5
+          done
+
+          # 타겟 이름이 잡히는지만 대충 확인 (job 명은 prometheus.yml과 일치해야 함)
+          curl -fsS "http://localhost:9090/api/v1/targets?state=active" | grep -E 'order-api|payment-api|product-api' || true
+
+      # 6) 실패 시 최근 로그 뿌리기
+      - name: Show logs on failure
+        if: ${{ failure() }}
+        run: docker compose logs --no-color --since=10m || true
+
+      # 7) 리소스 정리
+      - name: Compose down (cleanup)
+        if: ${{ always() }}
+        run: docker compose down -v
