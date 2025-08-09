@@ -24,5 +24,6 @@ services:
 
 networks:
   msa-net:
+    external: true
     name: msa-net
     driver: bridge
