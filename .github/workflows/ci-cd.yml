@@ -23,11 +23,11 @@ jobs:
         run: docker network create msa-net || true
 
       # 1) 앱 이미지 3개 로컬 태그로 빌드 (Dockerfile이 각 폴더에 있다고 가정)
-      - name: Build app images (local tags)
-        run: |
-          docker build -t msa-order:local   ./msa-order
-          docker build -t msa-product:local ./msa-product
-          docker build -t msa-payment:local ./msa-payment
+      #   - name: Build app images (local tags)
+      #     run: |
+      #       docker build -t msa-order:local   ./msa-order
+      #       docker build -t msa-product:local ./msa-product
+      #       docker build -t msa-payment:local ./msa-payment
 
       # 1) 인프라 (경로는 네 레포 구조에 맞게)
       - name: Up Kafka/ZooKeeper
