@@ -1,0 +1,42 @@
+services:
+  payment-db:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: paymentdb
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_ROOT_HOST: '%'
+    ports:
+      - "3318:3306"
+    volumes:
+      - payment-db-data:/var/lib/mysql
+    networks:
+      - payment-network
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      interval: 10s
+      retries: 5
+      start_period: 20s
+
+  payment-api:
+    build: .
+    ports:
+      - "8084:8083"
+    depends_on:
+      payment-db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://payment-db:3306/paymentdb
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+    networks:
+      - payment-network
+      - msa-net # 카프카
+
+networks:
+  payment-network:
+    driver: bridge
+  msa-net:
+    external: true
+
+volumes:
+  payment-db-data:
