@@ -29,18 +29,32 @@ jobs:
       - name: Create shared network
         run: docker network create msa-net || true
 
-      # 3) 전체 스택 기동
-      #    - 이미 리포에 docker-compose.yml(전체 스택) 있다면 그 파일만 쓰세요.
-      #    - 없고 infra/app 분리돼 있다면 -f 두 개로 합칠 수 있습니다(예시 주석).
-      - name: Compose up (build & run)
+      # 1) 인프라 (경로는 네 레포 구조에 맞게)
+      - name: Up Kafka/ZooKeeper
         run: |
-          # 예시 A) 전체가 한 파일일 때
-          docker compose -f docker-compose.yml up -d --build
+          docker compose -f ./kafka/docker-compose.yml up -d
+          docker compose -f ./kafka/docker-compose.yml ps
 
-          # 예시 B) infra와 app이 나뉘어 있을 때 (아래 주석 해제하고 파일명 맞추세요)
-          # docker compose -f deploy/infra-compose.yml -f deploy/app-compose.yml up -d --build
+      - name: Up Prometheus/Grafana
+        run: |
+          docker compose -f ./prometheus/docker-compose.yml up -d
+          docker compose -f ./prometheus/docker-compose.yml ps
 
-          docker compose ps
+      # 2) 앱들 (각 폴더의 compose 사용)
+      - name: Up Order API
+        run: |
+          docker compose -f ./msa-order/docker-compose.yml up -d --build
+          docker compose -f ./msa-order/docker-compose.yml ps
+
+      - name: Up Product API
+        run: |
+          docker compose -f ./msa-product/docker-compose.yml up -d --build
+          docker compose -f ./msa-product/docker-compose.yml ps
+
+      - name: Up Payment API
+        run: |
+          docker compose -f ./msa-payment/docker-compose.yml up -d --build
+          docker compose -f ./msa-payment/docker-compose.yml ps
 
       # 4) 헬스체크 (엔드포인트/포트는 네 컴포즈 설정에 맞춰 수정!)
       - name: Wait for services to be healthy (Order/Product/Payment)
