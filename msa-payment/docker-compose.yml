@@ -20,7 +20,7 @@ services:
   payment-api:
     build: .
     ports:
-      - "8084:8083"
+      - "8084:8084"
     depends_on:
       payment-db:
         condition: service_healthy
