@@ -22,14 +22,7 @@ jobs:
       - name: Create shared network
         run: docker network create msa-net || true
 
-      # 1) 앱 이미지 3개 로컬 태그로 빌드 (Dockerfile이 각 폴더에 있다고 가정)
-      #   - name: Build app images (local tags)
-      #     run: |
-      #       docker build -t msa-order:local   ./msa-order
-      #       docker build -t msa-product:local ./msa-product
-      #       docker build -t msa-payment:local ./msa-payment
-
-      # 1) 인프라 (경로는 네 레포 구조에 맞게)
+      # 1) 인프라
       - name: Up Kafka/ZooKeeper
         run: |
           docker compose -f ./kafka/docker-compose.yml up -d
@@ -60,19 +53,6 @@ jobs:
         run: |
           sleep 5
 
-      # 4) 헬스체크 (엔드포인트/포트는 네 컴포즈 설정에 맞춰 수정!)
-      # - name: Test Web Server Response [product]
-      #   run: |
-      #     curl -I http://localhost:8082/actuator/health | grep "200"
-
-      # - name: Test Web Server Response [order]
-      #   run: |
-      #     curl -I http://localhost:8083/actuator/health | grep "200"
-
-      # - name: Test Web Server Response [payment]
-      #   run: |
-      #     curl -I http://localhost:8084/actuator/health | grep "200"
-
       - name: Wait for services to be healthy (Order/Product/Payment)
         run: |
           try_get() { url="$1"; name="$2"; for i in {1..60}; do
@@ -85,17 +65,15 @@ jobs:
           try_get "http://localhost:8083/actuator/health" "msa-order"
           try_get "http://localhost:8084/actuator/health" "msa-payment"
 
-      # 5) Prometheus가 떠있는지 + 타겟이 등록됐는지 대략 체크(가볍게)
+      # 5) Prometheus 체크
       - name: Check Prometheus (optional)
         run: |
-          # 프로메테우스 포트도 컴포즈에서 매핑된 값으로 바꿔주세요(기본 9090 가정)
           for i in {1..40}; do
             code=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:9090/-/ready" || true)
             [ "$code" = "200" ] && echo "OK: Prometheus ready" && break
             echo "Waiting Prometheus ($i/40) - last code: $code"; sleep 5
           done
 
-          # 타겟 이름이 잡히는지만 대충 확인 (job 명은 prometheus.yml과 일치해야 함)
           curl -fsS "http://localhost:9090/api/v1/targets?state=active" | grep -E 'order-api|payment-api|product-api' || true
 
       # 6) 실패 시 최근 로그 뿌리기
