@@ -56,6 +56,10 @@ jobs:
           docker compose -f ./msa-payment/docker-compose.yml up -d --build
           docker compose -f ./msa-payment/docker-compose.yml ps
 
+      - name: Wait for Web Server to Start
+        run: |
+          sleep 5
+
       # 4) 헬스체크 (엔드포인트/포트는 네 컴포즈 설정에 맞춰 수정!)
       - name: Test Web Server Response [product]
         run: |
@@ -89,5 +93,9 @@ jobs:
 
       # 7) 리소스 정리
       - name: Compose down (cleanup)
-        if: ${{ always() }}
-        run: docker compose down -v
+        run: |
+          docker compose -f ./kafka/docker-compose.yml down
+          docker compose -f ./prometheus/docker-compose.yml down
+          docker compose -f ./msa-order/docker-compose.yml down
+          docker compose -f ./msa-product/docker-compose.yml down
+          docker compose -f ./msa-payment/docker-compose.yml down
